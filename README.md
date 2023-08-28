@@ -1,4 +1,4 @@
-# electron-app
+# fhtek-npi-export
 
 An Electron application with Vue and TypeScript
 

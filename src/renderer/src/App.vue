@@ -101,7 +101,12 @@
         <el-row :gutter="20">
           <el-col :xs="24" :sm="12" :lg="8">
             <el-form-item label="起始xponsn前缀">
-              <el-input v-model="form.xponsnPrefix" />
+              <el-input v-model="form.xponsn.prefix" />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12" :lg="8">
+            <el-form-item label="起始xponsn后缀">
+              <el-input v-model="form.xponsn.firstXponsnAppend" />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12" :lg="8">
@@ -173,15 +178,15 @@
       <el-row :gutter="20" justify="center" align="middle">
         <el-col :span="24">
           <div class="operation-btn-center">
-            <el-button type="primary" @click="dialogVisible = true">预览</el-button>
-            <el-button>导出</el-button>
+            <el-button type="primary" @click="previewTable">预览</el-button>
+            <el-button @click="exportExcel">导出</el-button>
           </div>
         </el-col>
       </el-row>
     </el-form>
-    <el-dialog v-model="dialogVisible" title="Tips" width="80%">
+    <el-dialog v-model="dialogVisible" title="预览" width="95%" top="5vh">
       <el-table :data="tableData">
-        <el-table-column type="index" label="序号" />
+        <el-table-column type="index" label="序号" width="60" />
         <el-table-column
           v-for="(item, index) in tableColumn"
           :key="index"
@@ -191,8 +196,8 @@
       </el-table>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">Cancel</el-button>
-          <el-button type="primary" @click="dialogVisible = false"> Confirm </el-button>
+          <el-button type="primary" @click="dialogVisible = false">确认</el-button>
+          <el-button @click="dialogVisible = false">取消</el-button>
         </span>
       </template>
     </el-dialog>
@@ -202,9 +207,26 @@
 <script setup lang="ts">
 import { reactive, computed, ref } from 'vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { stepAddMac } from 'src/util/util.ts'
+import { stepAddStr, stepAddBaseString, generateRandomPassword } from './util/tool'
+import XLSX from 'xlsx-js-style'
 
 const locale = zhCn
+
+interface ITableItem {
+  mac: string
+  sn: string
+  xponsn: string
+  voipchip: string
+  ssid: string
+  ssidKey: string
+  ssidac: string
+  ssidacKey: string
+  webpwd: string
+}
+interface IMonthItem {
+  value: string
+  label: string
+}
 const ProductType = {
   g: 'G',
   r: 'R'
@@ -223,62 +245,20 @@ const productTypeOptions = [
     label: ProductTypeText[ProductType.r]
   }
 ]
-const monthOptions = [
-  {
-    value: 1,
-    label: '一月'
-  },
-  {
-    value: 2,
-    label: '二月'
-  },
-  {
-    value: 3,
-    label: '三月'
-  },
-  {
-    value: 4,
-    label: '四月'
-  },
-  {
-    value: 5,
-    label: '五月'
-  },
-  {
-    value: 6,
-    label: '六月'
-  },
-  {
-    value: 7,
-    label: '七月'
-  },
-  {
-    value: 8,
-    label: '八月'
-  },
-  {
-    value: 9,
-    label: '九月'
-  },
-  {
-    value: 'A',
-    label: '十月'
-  },
-  {
-    value: 'B',
-    label: '十一月'
-  },
-  {
-    value: 'C',
-    label: '十二月'
-  }
-]
+const monthOptions: IMonthItem[] = []
+for (let i = 1; i < 13; i++) {
+  monthOptions.push({
+    value: `${stepAddBaseString(`${i}`, 0, 10, 16)}`,
+    label: `${i}月`
+  })
+}
 const dialogVisible = ref(false)
 const form = reactive({
   total: 10,
   mac: {
+    // 这里的mac地址字符串不需要添加“-”或“.”
     prefix: 'D093955',
-    firstMacAppend: '00001'
+    firstMacAppend: '00140'
   },
   sn: {
     prefix: 'FT',
@@ -286,20 +266,19 @@ const form = reactive({
     productNumber: 5,
     factoryNumber: 'W',
     year: `${new Date().getFullYear()}`,
-    month: 1,
-    batch: '01',
+    month: monthOptions[2].value,
+    batch: '16',
     firstSnAppend: '00001'
   },
-  xponsnPrefix: 'FHTK955',
+  xponsn: {
+    prefix: 'FHTK955',
+    firstXponsnAppend: '00140'
+  },
   voipchip: 'SI32280',
   ssidPrefix: 'Totalplay'
 })
-const tableData = []
+let tableData: ITableItem[] = []
 const tableColumn = [
-  {
-    key: 'mac',
-    title: 'mac'
-  },
   {
     key: 'mac',
     title: 'mac'
@@ -321,16 +300,16 @@ const tableColumn = [
     title: 'ssid'
   },
   {
-    key: 'ssid-key',
+    key: 'ssidKey',
     title: 'ssid-key'
   },
   {
     key: 'ssidac',
-    title: 'ssidac-key'
+    title: 'ssidac'
   },
   {
-    key: 'voipchip',
-    title: 'voipchip'
+    key: 'ssidacKey',
+    title: 'ssidac-key'
   },
   {
     key: 'webpwd',
@@ -338,31 +317,195 @@ const tableColumn = [
   }
 ]
 const pwdTip = '随机8位字符'
-const sidacAppend = '-5G'
+const sidacAppend = '5G'
 const firstMacText = computed(() => `${form.mac.prefix}${form.mac.firstMacAppend}`)
 const snYearText = computed(() => `${form.sn.year.slice(-2)}`)
-const firstSnText = computed(
+const snPrefix = computed(
   () =>
-    `${form.sn.prefix}${form.sn.productType}${form.sn.productNumber}${form.sn.factoryNumber}${snYearText.value}${form.sn.month}${form.sn.batch}${form.sn.firstSnAppend}`
+    `${form.sn.prefix}${form.sn.productType}${form.sn.productNumber}${form.sn.factoryNumber}${snYearText.value}${form.sn.month}${form.sn.batch}`
 )
-const xponsnText = computed(() => `${form.xponsnPrefix}${firstMacText.value.slice(-5)}`)
+const firstSnText = computed(() => `${snPrefix.value}${form.sn.firstSnAppend}`)
+const xponsnText = computed(() => `${form.xponsn.prefix}${form.xponsn.firstXponsnAppend}`)
 const ssidText = computed(() => `${form.ssidPrefix}-${firstSnText.value.slice(-4)}`)
-const ssidacText = computed(() => `${ssidText.value}${sidacAppend}`)
+const ssidacText = computed(() => `${ssidText.value}-${sidacAppend}`)
 const macSnComposed = computed(
   () => `${firstSnText.value.slice(-4)}${firstMacText.value.slice(-4)}`
 )
 const ssidkeyText = computed(() => `${macSnComposed.value}+${pwdTip}`)
 const ssidackeyText = computed(() => `${macSnComposed.value}+${pwdTip}`)
 const generateTableData = () => {
-  const tableItem = {
-    mac: ''
-  }
-  let lastMac = ''
+  tableData = []
+  let lastMac = form.mac.firstMacAppend
+  let lastSn = form.sn.firstSnAppend
+  let lastXponsn = form.xponsn.firstXponsnAppend
   for (let i = 0; i < form.total; i++) {
-    tableItem.mac = `${form.mac.prefix}${form.mac.firstMacAppend}`
-    lastMac = stepAddMac(form.mac.firstMacAppend)
+    const macItem = `${form.mac.prefix}${lastMac}`
+    const snItem = `${snPrefix.value}${lastSn}`
+    const macSnComposedItem = `${snItem.slice(-4)}${macItem.slice(-4)}`
+    const ssidItem = `${form.ssidPrefix}-${snItem.slice(-4)}`
+    const ssidRandomPwd = generateRandomPassword(8)
+    tableData.push({
+      mac: macItem,
+      sn: snItem,
+      xponsn: `${form.xponsn.prefix}${lastXponsn}`,
+      voipchip: form.voipchip,
+      ssid: ssidItem,
+      ssidKey: `${macSnComposedItem}${ssidRandomPwd}`,
+      ssidac: `${ssidItem}-${sidacAppend}`,
+      ssidacKey: `${macSnComposedItem}${ssidRandomPwd}`,
+      webpwd: `${generateRandomPassword(16, true)}`
+    })
+    lastMac = stepAddStr(lastMac)
+    lastSn = stepAddStr(lastSn, 1, 10)
+    lastXponsn = stepAddStr(lastXponsn, 1, 10)
   }
-  tableData.push(tableItem)
+  return tableData
+}
+const previewTable = () => {
+  generateTableData()
+  dialogVisible.value = true
+}
+const exportExcel = () => {
+  // 创建一个工作簿
+  const workbook = XLSX.utils.book_new()
+
+  // 创建工作表数据
+  if (!tableData.length) {
+    generateTableData()
+  }
+  const excelData: any[] = []
+  tableData.forEach((item, i) => {
+    excelData.push({
+      序号: i + 1,
+      mac: item.mac,
+      sn: item.sn,
+      xponsn: item.xponsn,
+      voipchip: item.voipchip,
+      ssid: item.ssid,
+      'ssid-key': item.ssidKey,
+      ssidac: item.ssidac,
+      'ssidac-key': item.ssidacKey,
+      webpwd: item.webpwd
+    })
+  })
+  // 将数据转换为工作表
+  const worksheet = XLSX.utils.json_to_sheet(excelData)
+
+  // 定义列宽度
+  worksheet['!cols'] = [
+    { wch: 10 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 }
+  ]
+  const firstRowStyle = {
+    font: { name: 'Microsoft YaHei', size: 11, bold: true },
+    alignment: { horizontal: 'center', vertical: 'center' }
+  }
+  const otherRowStyle = {
+    font: { name: 'Microsoft YaHei', size: 10 },
+    alignment: { horizontal: 'center', vertical: 'center' }
+  }
+  // 定义表头
+  worksheet['!rows'] = [{ hpx: 22.5 }]
+  worksheet['A1'] = {
+    v: '序号',
+    s: firstRowStyle
+  }
+  worksheet['B1'] = {
+    v: 'mac',
+    s: firstRowStyle
+  }
+  worksheet['C1'] = {
+    v: 'sn',
+    s: firstRowStyle
+  }
+  worksheet['D1'] = {
+    v: 'xponsn',
+    s: firstRowStyle
+  }
+  worksheet['E1'] = {
+    v: 'voipchip',
+    s: firstRowStyle
+  }
+  worksheet['F1'] = {
+    v: 'ssid',
+    s: firstRowStyle
+  }
+  worksheet['G1'] = {
+    v: 'ssid-key',
+    s: firstRowStyle
+  }
+  worksheet['H1'] = {
+    v: 'ssidac',
+    s: firstRowStyle
+  }
+  worksheet['I1'] = {
+    v: 'ssidac-key',
+    s: firstRowStyle
+  }
+  worksheet['J1'] = {
+    v: 'webpwd',
+    s: firstRowStyle
+  }
+  // 定义内容
+  excelData.forEach((item, i) => {
+    const j = i + 2
+    worksheet['!rows']?.push({ hpx: 22.5 })
+    worksheet[`A${j}`] = {
+      v: item['序号'],
+      s: otherRowStyle
+    }
+    worksheet[`B${j}`] = {
+      v: item['mac'],
+      s: otherRowStyle
+    }
+    worksheet[`C${j}`] = {
+      v: item['sn'],
+      s: otherRowStyle
+    }
+    worksheet[`D${j}`] = {
+      v: item['xponsn'],
+      s: otherRowStyle
+    }
+    worksheet[`E${j}`] = {
+      v: item['voipchip'],
+      s: otherRowStyle
+    }
+    worksheet[`F${j}`] = {
+      v: item['ssid'],
+      s: otherRowStyle
+    }
+    worksheet[`G${j}`] = {
+      v: item['ssid-key'],
+      s: otherRowStyle
+    }
+    worksheet[`H${j}`] = {
+      v: item['ssidac'],
+      s: otherRowStyle
+    }
+    worksheet[`I${j}`] = {
+      v: item['ssidac-key'],
+      s: otherRowStyle
+    }
+    worksheet[`J${j}`] = {
+      v: item['webpwd'],
+      s: otherRowStyle
+    }
+  })
+
+  // 将工作表添加到工作簿
+  XLSX.utils.book_append_sheet(workbook, worksheet, '个参值')
+
+  // 将工作簿保存为文件
+  const filePath = 'output.xlsx'
+  XLSX.writeFile(workbook, filePath)
 }
 </script>
 
@@ -395,3 +538,4 @@ legend {
   white-space: nowrap;
 } */
 </style>
+./util/tool.js
