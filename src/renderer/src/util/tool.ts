@@ -70,3 +70,40 @@ export const generateRandomPassword = (length, hasSymbol = false) => {
 
   return password
 }
+
+/**
+ * 判断是不是符合要求的整数
+ * @param value 判断的值
+ * @param min 最小值
+ * @param max 最大值
+ * @returns 是不是符合要求，符合要求返回true，不符合返回true
+ */
+export const isValidInteger = (value: any, min: number, max: number) => {
+  const reg = /^-?[1-9]\d*$/
+  const val = Number(value)
+  if (!value.trim().length) {
+    return false
+  }
+  if (!reg.test(value)) {
+    return false
+  }
+  if (min && val < min) {
+    return false
+  }
+  if (max && val > max) {
+    return false
+  }
+  return true
+}
+
+/**
+ * 是否指定长度的数字字符串
+ * @param value 要校验的字符串
+ * @param type 进制类型，'hex'：16进制， 'dec'：十进制，默认16进制
+ * @param length 指定长度，默认长度5
+ * @returns 是不是符合要求，符合要求返回true，不符合返回true
+ */
+export const isValidNumStr = (value, type: 'hex' | 'dec' = 'hex', length = 5) => {
+  const reg = new RegExp(`^[\\d${type === 'hex' ? 'a-f' : ''}]{${length}}$`, 'i')
+  return reg.test(value)
+}
