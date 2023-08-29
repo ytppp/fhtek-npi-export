@@ -59,12 +59,18 @@ export const stepAddStr = (str: string, step = 8, base = 16, length = 5, prefix 
 export const generateRandomPassword = (length, hasSymbol = false) => {
   let characterSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   if (hasSymbol) {
-    characterSet += '!@#*+-_=~.?'
+    characterSet += '!@*_~.?#=+-'
   }
   let password = ''
 
   for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * characterSet.length)
+    let randomIndex = 0
+    if (i == 0 && hasSymbol) {
+      // 不能以#, =, +, -作为开头
+      randomIndex = Math.floor(Math.random() * (characterSet.length - 4))
+    } else {
+      randomIndex = Math.floor(Math.random() * characterSet.length)
+    }
     password += characterSet.charAt(randomIndex)
   }
 
