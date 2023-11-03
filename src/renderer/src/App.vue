@@ -101,18 +101,18 @@
           </el-col>
         </el-row>
       </fieldset>
-      <!-- xponsn -->
+      <!-- gponsn -->
       <fieldset>
-        <legend>xponsn</legend>
+        <legend>gponsn</legend>
         <el-row :gutter="20">
           <el-col :xs="24" :sm="12" :lg="8">
-            <el-form-item label="xponsn前缀" prop="xponsn.prefix">
-              <el-input v-model="form.xponsn.prefix" />
+            <el-form-item label="gponsn前缀" prop="gponsn.prefix">
+              <el-input v-model="form.gponsn.prefix" />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12" :lg="8">
-            <el-form-item label="预览起始xponsn">
-              {{ xponsnText }}
+            <el-form-item label="预览起始gponsn">
+              {{ gponsnText }}
             </el-form-item>
           </el-col>
         </el-row>
@@ -174,7 +174,7 @@
         <legend>webpwd</legend>
         <el-row :gutter="20">
           <el-col :xs="24" :sm="12" :lg="8">
-            <el-form-item label="生成方式">随机16位字符</el-form-item>
+            <el-form-item label="生成方式">生成16位字符</el-form-item>
           </el-col>
         </el-row>
       </fieldset>
@@ -225,7 +225,7 @@ const locale = zhCn
 interface ITableItem {
   mac: string
   sn: string
-  xponsn: string
+  gponsn: string
   voipchip: string
   ssid: string
   ssidKey: string
@@ -237,7 +237,7 @@ interface IExcelData {
   序号: number
   mac: string
   sn: string
-  xponsn: string
+  gponsn: string
   voipchip: string
   ssid: string
   'ssid-key': string
@@ -265,7 +265,7 @@ interface IForm {
     batch: string
     firstSnAppend: string
   }
-  xponsn: {
+  gponsn: {
     prefix: string
   }
   voipchip: string
@@ -315,7 +315,7 @@ const form = reactive<IForm>({
     batch: '16',
     firstSnAppend: '00001'
   },
-  xponsn: {
+  gponsn: {
     prefix: 'FHTK955'
   },
   voipchip: 'SI32280',
@@ -373,7 +373,7 @@ const formRules = reactive<FormRules<IForm>>({
       trigger: 'blur'
     }
   ],
-  'xponsn.prefix': [{ required: true, message: '请输入xponsn前缀', trigger: 'blur' }],
+  'gponsn.prefix': [{ required: true, message: '请输入gponsn前缀', trigger: 'blur' }],
   voipchip: [{ required: true, message: '请输入voipchip', trigger: 'blur' }],
   ssidPrefix: [{ required: true, message: '请输入ssid前缀', trigger: 'blur' }]
 })
@@ -388,8 +388,8 @@ const tableColumn = [
     title: 'sn'
   },
   {
-    key: 'xponsn',
-    title: 'xponsn'
+    key: 'gponsn',
+    title: 'gponsn'
   },
   {
     key: 'voipchip',
@@ -418,7 +418,7 @@ const tableColumn = [
 ]
 const getMac = (macPrefix, macAppend) => `${macPrefix}${macAppend}`
 const getSn = (snPrefix, snAppend) => `${snPrefix}${snAppend}`
-const getXponsn = (xponsnPrefix, mac) => `${xponsnPrefix}${mac.slice(-5)}`
+const getGponsn = (gponsnPrefix, mac) => `${gponsnPrefix}${mac.slice(-5)}`
 const getSsid = (ssidPrefix, sn, isAc = false) => {
   const sidacAppend = '5G'
   return `${ssidPrefix}-${sn.slice(-4)}${isAc ? `-${sidacAppend}` : ''}`
@@ -440,7 +440,7 @@ const snPrefix = computed(
     `${form.sn.prefix}${form.sn.productType}${form.sn.productNumber}${form.sn.factoryNumber}${snYearText.value}${form.sn.month}${form.sn.batch}`
 )
 const firstSnText = computed(() => getSn(snPrefix.value, form.sn.firstSnAppend))
-const xponsnText = computed(() => getXponsn(form.xponsn.prefix, firstMacText.value))
+const gponsnText = computed(() => getGponsn(form.gponsn.prefix, firstMacText.value))
 const ssidText = computed(() => getSsid(form.ssidPrefix, firstSnText.value))
 const ssidacText = computed(() => getSsid(form.ssidPrefix, firstSnText.value, true))
 const macSnComposedText = computed(() => getMacSnComposed(firstSnText.value, firstMacText.value))
@@ -460,13 +460,13 @@ const generateTableData = () => {
     data.push({
       mac: macItem,
       sn: snItem,
-      xponsn: getXponsn(form.xponsn.prefix, lastMac),
+      gponsn: getGponsn(form.gponsn.prefix, lastMac),
       voipchip: form.voipchip,
       ssid: getSsid(form.ssidPrefix, snItem),
       ssidKey: macSnComposedItem,
       ssidac: getSsid(form.ssidPrefix, snItem, true),
       ssidacKey: macSnComposedItem,
-      webpwd: `${generateRandomPassword(16, true)}`
+      webpwd: '*Br3T+HFi-8GgQ8!' // `${generateRandomPassword(16, true)}`
     })
     lastMac = stepAddStr(lastMac)
     lastSn = stepAddStr(lastSn, 1, 10)
@@ -517,7 +517,7 @@ const exportExcel = () => {
       序号: i + 1,
       mac: item.mac,
       sn: item.sn,
-      xponsn: item.xponsn,
+      gponsn: item.gponsn,
       voipchip: item.voipchip,
       ssid: item.ssid,
       'ssid-key': item.ssidKey,
@@ -561,7 +561,7 @@ const exportExcel = () => {
     s: firstRowStyle
   }
   worksheet['D1'] = {
-    v: 'xponsn',
+    v: 'gponsn',
     s: firstRowStyle
   }
   worksheet['E1'] = {
@@ -609,7 +609,7 @@ const exportExcel = () => {
       s: otherRowStyle
     }
     worksheet[`D${j}`] = {
-      v: item['xponsn'],
+      v: item['gponsn'],
       s: otherRowStyle
     }
     worksheet[`E${j}`] = {
