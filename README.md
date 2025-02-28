@@ -49,11 +49,11 @@ $ npm run build:linux
   - 第八位：生产月份: 3代表三月........A代表10月，B代表11月，C代表12月
   - 第九、十位：生产批次
   - 后五位：本批编号
-- xponsn: FHTK955 + mac 后五位
+- gponsn: FHTK+生产年份+生产月份+后5位16进制递增
 - voipchip: 自己填写
-- ssid: Totalplay- + sn 后四位
-- ssid-key: sn 后四位 + mac 后四位 + 八位随机大小写字母数字
+- ssid: Totalplay- + gponsn 后四位
+- ssid-key: gponsn 后四位 + mac 后四位 + 八位随机大小写字母数字
 - ssidac: ssid + -5G
-- ssidac-key: sn 后四位 + mac 后四位 + 八位随机大小写字母数字
-- webpwd: 十六位随机大小写字母数字加特定字符 "!","@","#","*","+","-","_","=","~",".","?"
+- ssidac-key: gponsn 后四位 + mac 后四位 + 八位随机大小写字母数字
+- webpwd: 固定密码：*Br3T+HFi-8GgQ8!  // 以前：十六位随机大小写字母数字加特定字符 "!","@","#","*","+","-","_","=","~",".","?"
 

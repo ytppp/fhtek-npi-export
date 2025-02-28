@@ -40,6 +40,7 @@ export const stepAddBaseString = (
  * 递增字符串
  * @param str
  * @param step 递增值
+ * @param base 进制
  * @param length 填充到多长
  * @param prefix 删除或填充的前缀
  * @returns 递增后的 mac

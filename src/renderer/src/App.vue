@@ -106,13 +106,18 @@
         <legend>gponsn</legend>
         <el-row :gutter="20">
           <el-col :xs="24" :sm="12" :lg="8">
-            <el-form-item label="gponsn前缀" prop="gponsn.prefix">
+            <el-form-item label="xponsn前缀" prop="gponsn.prefix">
               <el-input v-model="form.gponsn.prefix" />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12" :lg="8">
+            <el-form-item label="xponsn编号" prop="gponsn.firstGponsnAppend">
+              <el-input v-model="form.gponsn.firstGponsnAppend" />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12" :lg="8">
             <el-form-item label="预览起始gponsn">
-              {{ gponsnText }}
+              {{ firstGponsnText }}
             </el-form-item>
           </el-col>
         </el-row>
@@ -174,7 +179,10 @@
         <legend>webpwd</legend>
         <el-row :gutter="20">
           <el-col :xs="24" :sm="12" :lg="8">
-            <el-form-item label="生成方式">生成16位字符</el-form-item>
+            <el-form-item v-if="pwdType === PwdType.fix" label="固定密码">{{
+              PwdFixedText
+            }}</el-form-item>
+            <el-form-item v-else label="生成方式">生成16位字符</el-form-item>
           </el-col>
         </el-row>
       </fieldset>
@@ -190,12 +198,14 @@
     <el-dialog v-model="dialogVisible" title="数据预览" width="95%" top="5vh">
       <el-table :data="tableData">
         <el-table-column type="index" label="序号" width="60" />
-        <el-table-column
-          v-for="(item, index) in tableColumn"
-          :key="index"
-          :property="item.key"
-          :label="item.title"
-        />
+        <template v-for="(item, index) in tableColumn">
+          <el-table-column
+            v-if="showColumn(item.key)"
+            :key="index"
+            :property="item.key"
+            :label="item.title"
+          />
+        </template>
       </el-table>
       <template #footer>
         <span class="dialog-footer">
@@ -225,8 +235,8 @@ const locale = zhCn
 interface ITableItem {
   mac: string
   sn: string
-  gponsn: string
-  voipchip: string
+  gponsn?: string
+  voipchip?: string
   ssid: string
   ssidKey: string
   ssidac: string
@@ -237,8 +247,8 @@ interface IExcelData {
   序号: number
   mac: string
   sn: string
-  gponsn: string
-  voipchip: string
+  gponsn?: string
+  voipchip?: string
   ssid: string
   'ssid-key': string
   ssidac: string
@@ -267,6 +277,7 @@ interface IForm {
   }
   gponsn: {
     prefix: string
+    firstGponsnAppend: string
   }
   voipchip: string
   ssidPrefix: string
@@ -289,6 +300,10 @@ const productTypeOptions = [
     label: ProductTypeText[ProductType.r]
   }
 ]
+const PwdType = {
+  fix: 'fix',
+  generate: 'generate'
+}
 const monthOptions: IMonthItem[] = []
 for (let i = 1; i < 13; i++) {
   monthOptions.push({
@@ -312,11 +327,12 @@ const form = reactive<IForm>({
     factoryNumber: 'W',
     year: `${new Date().getFullYear()}`,
     month: monthOptions[2].value,
-    batch: '16',
+    batch: '01',
     firstSnAppend: '00001'
   },
   gponsn: {
-    prefix: 'FHTK955'
+    prefix: 'FHTK',
+    firstGponsnAppend: '00001'
   },
   voipchip: 'SI32280',
   ssidPrefix: 'Totalplay'
@@ -374,6 +390,20 @@ const formRules = reactive<FormRules<IForm>>({
     }
   ],
   'gponsn.prefix': [{ required: true, message: '请输入gponsn前缀', trigger: 'blur' }],
+  'gponsn.firstGponsnAppend': [
+    {
+      validator: (_rule: any, value: any, callback: any) => {
+        if (!value.trim().length) {
+          callback(new Error('请输入gponsn编号'))
+        }
+        if (!isValidNumStr(value)) {
+          callback(new Error('gponsn编号是一个5位的16进制字符串'))
+        }
+        callback()
+      },
+      trigger: 'blur'
+    }
+  ],
   voipchip: [{ required: true, message: '请输入voipchip', trigger: 'blur' }],
   ssidPrefix: [{ required: true, message: '请输入ssid前缀', trigger: 'blur' }]
 })
@@ -389,7 +419,7 @@ const tableColumn = [
   },
   {
     key: 'gponsn',
-    title: 'gponsn'
+    title: 'xponsn'
   },
   {
     key: 'voipchip',
@@ -397,28 +427,29 @@ const tableColumn = [
   },
   {
     key: 'ssid',
-    title: 'ssid'
+    title: 'ssid24g'
   },
   {
     key: 'ssidKey',
-    title: 'ssid-key'
+    title: 'ssid24g-key'
   },
   {
     key: 'ssidac',
-    title: 'ssidac'
+    title: 'ssid5g'
   },
   {
     key: 'ssidacKey',
-    title: 'ssidac-key'
+    title: 'ssid5g-key'
   },
   {
     key: 'webpwd',
     title: 'webpwd'
   }
 ]
+const pwdType = PwdType.fix // fix | generate
+const PwdFixedText = '*Br3T+HFi-8GgQ8!'
 const getMac = (macPrefix, macAppend) => `${macPrefix}${macAppend}`
 const getSn = (snPrefix, snAppend) => `${snPrefix}${snAppend}`
-const getGponsn = (gponsnPrefix, mac) => `${gponsnPrefix}${mac.slice(-5)}`
 const getSsid = (ssidPrefix, sn, isAc = false) => {
   const sidacAppend = '5G'
   return `${ssidPrefix}-${sn.slice(-4)}${isAc ? `-${sidacAppend}` : ''}`
@@ -440,10 +471,15 @@ const snPrefix = computed(
     `${form.sn.prefix}${form.sn.productType}${form.sn.productNumber}${form.sn.factoryNumber}${snYearText.value}${form.sn.month}${form.sn.batch}`
 )
 const firstSnText = computed(() => getSn(snPrefix.value, form.sn.firstSnAppend))
-const gponsnText = computed(() => getGponsn(form.gponsn.prefix, firstMacText.value))
-const ssidText = computed(() => getSsid(form.ssidPrefix, firstSnText.value))
-const ssidacText = computed(() => getSsid(form.ssidPrefix, firstSnText.value, true))
-const macSnComposedText = computed(() => getMacSnComposed(firstSnText.value, firstMacText.value))
+const firstGponsnText = computed(
+  () => `${form.gponsn.prefix}${snYearText.value}${form.sn.month}${form.gponsn.firstGponsnAppend}`
+)
+const ssidText = computed(() => getSsid(form.ssidPrefix, firstGponsnText.value))
+const ssidacText = computed(() => getSsid(form.ssidPrefix, firstGponsnText.value, true))
+const isG = computed(() => form.sn.productType === ProductType.g) // 是否光猫
+const macSnComposedText = computed(() =>
+  getMacSnComposed(firstGponsnText.value, firstMacText.value)
+)
 const generateTableData = () => {
   const loading = ElLoading.service({
     lock: true,
@@ -453,23 +489,29 @@ const generateTableData = () => {
   const data: ITableItem[] = []
   let lastMac = form.mac.firstMacAppend
   let lastSn = form.sn.firstSnAppend
+  let lastGponsn = form.gponsn.firstGponsnAppend
+  const macStepValue = isG.value ? 8 : 2
   for (let i = 0; i < form.total; i++) {
     const macItem = getMac(form.mac.prefix, lastMac)
     const snItem = getSn(snPrefix.value, lastSn)
-    const macSnComposedItem = getMacSnComposed(snItem, macItem, 'pwd')
-    data.push({
+    const gponsnItem = `${form.gponsn.prefix}${snYearText.value}${form.sn.month}${lastGponsn}`
+    const macSnComposedItem = getMacSnComposed(gponsnItem, macItem, 'pwd')
+    const webpwd = pwdType === PwdType.fix ? PwdFixedText : `${generateRandomPassword(16, true)}`
+    const dataItem: ITableItem = {
       mac: macItem,
       sn: snItem,
-      gponsn: getGponsn(form.gponsn.prefix, lastMac),
+      gponsn: gponsnItem,
       voipchip: form.voipchip,
-      ssid: getSsid(form.ssidPrefix, snItem),
+      ssid: getSsid(form.ssidPrefix, gponsnItem),
       ssidKey: macSnComposedItem,
-      ssidac: getSsid(form.ssidPrefix, snItem, true),
+      ssidac: getSsid(form.ssidPrefix, gponsnItem, true),
       ssidacKey: macSnComposedItem,
-      webpwd: '*Br3T+HFi-8GgQ8!' // `${generateRandomPassword(16, true)}`
-    })
-    lastMac = stepAddStr(lastMac)
+      webpwd
+    }
+    data.push(dataItem)
+    lastMac = stepAddStr(lastMac, macStepValue)
     lastSn = stepAddStr(lastSn, 1, 10)
+    lastGponsn = stepAddStr(lastGponsn, 1)
   }
   tableData.value = data
   loading.close()
@@ -517,8 +559,14 @@ const exportExcel = () => {
       序号: i + 1,
       mac: item.mac,
       sn: item.sn,
-      gponsn: item.gponsn,
-      voipchip: item.voipchip,
+      ...((): Partial<IExcelData> | null => {
+        return isG.value
+          ? {
+              gponsn: item.gponsn,
+              voipchip: item.voipchip
+            }
+          : null
+      })(),
       ssid: item.ssid,
       'ssid-key': item.ssidKey,
       ssidac: item.ssidac,
@@ -526,11 +574,11 @@ const exportExcel = () => {
       webpwd: item.webpwd
     })
   })
+  console.log('excelData', excelData)
   // 将数据转换为工作表
   const worksheet = XLSX.utils.json_to_sheet(excelData)
 
-  // 定义列宽度
-  worksheet['!cols'] = [
+  const colsG = [
     { wch: 10 },
     { wch: 25 },
     { wch: 25 },
@@ -542,6 +590,18 @@ const exportExcel = () => {
     { wch: 30 },
     { wch: 30 }
   ]
+  const colsR = [
+    { wch: 10 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 30 },
+    { wch: 30 },
+    { wch: 30 },
+    { wch: 30 }
+  ]
+  // 定义列宽度
+  worksheet['!cols'] = isG.value ? colsG : colsR
   // 定义表头样式
   const firstRowStyle = {
     font: { name: 'Microsoft YaHei', size: 11, bold: true },
@@ -560,33 +620,56 @@ const exportExcel = () => {
     v: 'sn',
     s: firstRowStyle
   }
-  worksheet['D1'] = {
-    v: 'gponsn',
-    s: firstRowStyle
-  }
-  worksheet['E1'] = {
-    v: 'voipchip',
-    s: firstRowStyle
-  }
-  worksheet['F1'] = {
-    v: 'ssid',
-    s: firstRowStyle
-  }
-  worksheet['G1'] = {
-    v: 'ssid-key',
-    s: firstRowStyle
-  }
-  worksheet['H1'] = {
-    v: 'ssidac',
-    s: firstRowStyle
-  }
-  worksheet['I1'] = {
-    v: 'ssidac-key',
-    s: firstRowStyle
-  }
-  worksheet['J1'] = {
-    v: 'webpwd',
-    s: firstRowStyle
+  if (isG.value) {
+    worksheet['D1'] = {
+      v: 'xponsn',
+      s: firstRowStyle
+    }
+    worksheet['E1'] = {
+      v: 'voipchip',
+      s: firstRowStyle
+    }
+    worksheet['F1'] = {
+      v: 'ssid24g',
+      s: firstRowStyle
+    }
+    worksheet['G1'] = {
+      v: 'ssid24g-key',
+      s: firstRowStyle
+    }
+    worksheet['H1'] = {
+      v: 'ssid5g',
+      s: firstRowStyle
+    }
+    worksheet['I1'] = {
+      v: 'ssid5g-key',
+      s: firstRowStyle
+    }
+    worksheet['J1'] = {
+      v: 'webpwd',
+      s: firstRowStyle
+    }
+  } else {
+    worksheet['D1'] = {
+      v: 'ssid24g',
+      s: firstRowStyle
+    }
+    worksheet['E1'] = {
+      v: 'ssid24g-key',
+      s: firstRowStyle
+    }
+    worksheet['F1'] = {
+      v: 'ssid5g',
+      s: firstRowStyle
+    }
+    worksheet['G1'] = {
+      v: 'ssid5g-key',
+      s: firstRowStyle
+    }
+    worksheet['H1'] = {
+      v: 'webpwd',
+      s: firstRowStyle
+    }
   }
   // 定义表内容样式
   const otherRowStyle = {
@@ -608,33 +691,56 @@ const exportExcel = () => {
       v: item['sn'],
       s: otherRowStyle
     }
-    worksheet[`D${j}`] = {
-      v: item['gponsn'],
-      s: otherRowStyle
-    }
-    worksheet[`E${j}`] = {
-      v: item['voipchip'],
-      s: otherRowStyle
-    }
-    worksheet[`F${j}`] = {
-      v: item['ssid'],
-      s: otherRowStyle
-    }
-    worksheet[`G${j}`] = {
-      v: item['ssid-key'],
-      s: otherRowStyle
-    }
-    worksheet[`H${j}`] = {
-      v: item['ssidac'],
-      s: otherRowStyle
-    }
-    worksheet[`I${j}`] = {
-      v: item['ssidac-key'],
-      s: otherRowStyle
-    }
-    worksheet[`J${j}`] = {
-      v: item['webpwd'],
-      s: otherRowStyle
+    if (isG.value) {
+      worksheet[`D${j}`] = {
+        v: item['gponsn'],
+        s: otherRowStyle
+      }
+      worksheet[`E${j}`] = {
+        v: item['voipchip'],
+        s: otherRowStyle
+      }
+      worksheet[`F${j}`] = {
+        v: item['ssid'],
+        s: otherRowStyle
+      }
+      worksheet[`G${j}`] = {
+        v: item['ssid-key'],
+        s: otherRowStyle
+      }
+      worksheet[`H${j}`] = {
+        v: item['ssidac'],
+        s: otherRowStyle
+      }
+      worksheet[`I${j}`] = {
+        v: item['ssidac-key'],
+        s: otherRowStyle
+      }
+      worksheet[`J${j}`] = {
+        v: item['webpwd'],
+        s: otherRowStyle
+      }
+    } else {
+      worksheet[`D${j}`] = {
+        v: item['ssid'],
+        s: otherRowStyle
+      }
+      worksheet[`E${j}`] = {
+        v: item['ssid-key'],
+        s: otherRowStyle
+      }
+      worksheet[`F${j}`] = {
+        v: item['ssidac'],
+        s: otherRowStyle
+      }
+      worksheet[`G${j}`] = {
+        v: item['ssidac-key'],
+        s: otherRowStyle
+      }
+      worksheet[`H${j}`] = {
+        v: item['webpwd'],
+        s: otherRowStyle
+      }
     }
   })
 
@@ -645,6 +751,12 @@ const exportExcel = () => {
   const filePath = '个参值.xlsx'
   XLSX.writeFile(workbook, filePath)
   loading.close()
+}
+const showColumn = (val) => {
+  if (!isG.value && (val === 'gponsn' || val === 'voipchip')) {
+    return false
+  }
+  return true
 }
 </script>
 
@@ -680,4 +792,3 @@ legend {
   white-space: nowrap;
 } */
 </style>
-./util/tool.js
