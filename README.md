@@ -49,7 +49,7 @@ $ npm run build:linux
   - 第八位：生产月份: 3代表三月........A代表10月，B代表11月，C代表12月
   - 第九、十位：生产批次
   - 后五位：本批编号
-- gponsn: FHTK+生产年份+生产月份+后5位16进制递增（路由器表格不展示）
+- xponsn: FHTK+生产年份+生产月份+后5位16进制递增（路由器表格不展示）(代码中用gponsn表示)
 - voipchip: 自己填写（路由器表格不展示）
 - ssid: Totalplay- + gponsn 后四位
 - ssid-key: gponsn 后四位 + mac 后四位 + 八位随机大小写字母数字
