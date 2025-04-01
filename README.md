@@ -33,6 +33,12 @@ $ npm run build:mac
 $ npm run build:linux
 ```
 
+### how to push project to repo
+
+```commandline
+./git-push.sh
+```
+
 ### npi 规则
 
 #### totalplay 规则
